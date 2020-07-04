@@ -1,68 +1,114 @@
 var pokemonRepository = (function () {
-  var repository = [];
-  var apiUrl = 'https://pokeapi.co/api/v2/pokemon/?limit=150';
+    var repository = [];
+    var apiUrl = "https://pokeapi.co/api/v2/pokemon/?limit=150";
+    var modalBody = $("#modal-container");
 
-
-  //function to add pokemon to pokedex
-  function add(pokemon) {
+    function add(pokemon) {
       repository.push(pokemon);
-  }
+    }
 
-  //Function to pull all pokemon data
-  function getAll() {
+    function getAll() {
       return repository;
-  }
+    }
 
-  //Function to create a list of pokemon from API
-  function addListItem(pokemon) {
-      var $pokemonList = document.querySelector('ul');
-      var listItem = document.createElement('li');
-      var button = document.createElement('button');
-      button.innerText = pokemon.name;
-      button.classList.add('list-button');
-      listItem.appendChild(button);
-      $pokemonList.appendChild(listItem);
-      button.addEventListener('click', function (event) {
-          showDetails(pokemon);
-      })
-  }
+    function addListItem(pokemon) {
+      var $pokemonList = $(".pokemon-list");
+      var $button = $(
+        '<button>' +
+          pokemon.name +
+          "</button>"
+      );
+      var $listItem = $("<li>");
+      $listItem.append($button);
+      $pokemonList.append($listItem);
+      $button.on("click", function (event) {
+        showDetails(pokemon);
+      });
+    }
 
-  //Function to load pokemon list from API
-  function loadList() {
-      return fetch(apiUrl).then(function (response) {
-          return response.json();
-      }).then(function (json) {
+    function showDetails(item) {
+      pokemonRepository.loadDetails(item).then(function () {
+        console.log(item);
+        showModal(item);
+      });
+    }
+
+    function loadList() {
+      return $.ajax(apiUrl)
+        .then(function (json) {
           json.results.forEach(function (item) {
-              var pokemon = {
-                  name: item.name,
-                  detailsUrl: item.url
-              };
-              add(pokemon);
+            var pokemon = {
+              name: item.name,
+              detailsUrl: item.url,
+            };
+            add(pokemon);
           });
-      }).catch(function (e) {
+        })
+        .catch(function (e) {
           console.error(e);
-      })
-  }
+        });
+    }
 
-  // Function to load details for each pokemon:
-  function loadDetails(item) {
+    function loadDetails(item) {
       var url = item.detailsUrl;
-      return fetch(url).then(function (response) {
-          return response.json();
-      }).then(function (details) {
+      return $.ajax(url)
+        .then(function (details) {
           item.imageUrl = details.sprites.front_default;
           item.height = details.height;
-      }).catch(function (error) {
-          console.error(error);
-      });
-  }
+        })
+        .catch(function (e) {
+          console.error(e);
+        });
+    }
 
-  // Function to show pokemon details
-  function showDetails(item) {
-      pokemonRepository.loadDetails(item).then(function () {
-          showModal(item);
+    function showModal(item) {
+
+      modalBody.empty();
+      var nameElement = $("<h1>" + item.name + "</h1>");
+      var imageElement = $('<img class="modal-img">');
+      imageElement.attr("src", item.imageUrl);
+      var heightElement = $("<p>" + "Height: " + item.height + "m" + "</p>");
+      var closeButtonElement =  $('<button>' + 'Close' + "</button>");
+      closeButtonElement.addClass('modal-close');
+
+      /*This is the source of my error
+      $closeButtonElement.on('click, function (event) {
+          hideModal();
       });
-  }
+      */
+
+
+      modalBody.append(nameElement);
+      modalBody.append(closeButtonElement);
+      modalBody.append(imageElement);
+      modalBody.append(heightElement);
+      modalBody.addClass('is-visible');
+    }
+
+     // Function to hide Modal
+    function hideModal() {
+    modalBody.removeClass('is-visible');
+    }
+
+
+
+    return {
+      add: add,
+      getAll: getAll,
+      addListItem: addListItem,
+      loadList: loadList,
+      loadDetails: loadDetails,
+      showDetails: showDetails,
+      showModal: showModal,
+    };
+  })();
+
+  pokemonRepository.loadList().then(function () {
+    pokemonRepository.getAll().forEach(function (pokemon) {
+      pokemonRepository.addListItem(pokemon);
+    });
+  });
+
 
   //Function to show modal
   function showModal(item) {
